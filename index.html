@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExoticSMP - Server Shop</title>
+    <style>
+        /* Resetare și setări de bază */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial Black', Gadget, sans-serif;
+            background-color: #1a1a1e; 
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        /* 1. COȘUL FIX (SUS ÎN DREAPTA) */
+        .cart-navbar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(34, 34, 39, 0.9);
+            padding: 10px 18px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: sans-serif;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .cart-navbar:hover {
+            transform: scale(1.05);
+        }
+
+        .cart-icon { font-size: 1.2rem; }
+        .cart-count {
+            background-color: #2ecc71;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        /* 2. MENIUL DINAMIC AL COȘULUI (SIDEBAR-UL) */
+        .cart-sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px; /* Ascuns inițial în dreapta */
+            width: 400px;
+            height: 100vh;
+            background: #1e1e24;
+            z-index: 200;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.7);
+            transition: right 0.4s ease; /* Animație glisare lină */
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            font-family: sans-serif;
+        }
+
+        .cart-sidebar.open {
+            right: 0; /* Apare pe ecran */
+        }
+
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2d2d35;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .cart-title { font-family: 'Arial Black', sans-serif; font-size: 1.5rem; color: #2ecc71; }
+        .close-cart { font-size: 1.8rem; cursor: pointer; color: #888; transition: color 0.2s; }
+        .close-cart:hover { color: #fff; }
+
+        /* Lista cu produse adăugate */
+        .cart-items-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #141416;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #2ecc71;
+        }
+
+        .item-info h4 { font-weight: bold; margin-bottom: 3px; font-size: 1rem; }
+        .item-info span { color: #2ecc71; font-weight: bold; }
+        .remove-btn { background: none; border: none; color: #e74c3c; cursor: pointer; font-weight: bold; }
+
+        /* Total și Metode de plată */
+        .cart-footer {
+            border-top: 2px solid #2d2d35;
+            padding-top: 15px;
+        }
+
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        /* Inputuri de text */
+        .checkout-input {
+            width: 100%;
+            padding: 12px;
+            background: #141416;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+        .checkout-input:focus { border-color: #2ecc71; outline: none; }
+
+        /* Opțiuni metodă de plată */
+        .payment-methods {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .pay-option {
+            flex: 1;
+            background: #2d2d35;
+            border: 2px solid transparent;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .pay-option.selected {
+            border-color: #5865F2; 
+            background: rgba(88, 101, 242, 0.15);
+            color: #fff;
+        }
+
+        /* Buton Checkout */
+        .checkout-btn {
+            background: #2ecc71;
+            color: #fff;
+            border: none;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .checkout-btn:hover { background: #27ae60; }
+        .checkout-btn:disabled { background: #555; cursor: not-allowed; }
+
+        /* Fundal întunecat de pe ecran când coșul e deschis */
+        .cart-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 150;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+        .cart-overlay.show { display: block; }
+
+        /* POP-UP MODAL (CHENAR FINALIZARE COMANDĂ) */
+        .success-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%;
+            max-width: 450px;
+            background: #1e1e24;
+            border: 2px solid #2ecc71;
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            z-index: 300;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.7);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            font-family: sans-serif;
+        }
+
+        .success-modal.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            color: #2ecc71;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .success-title {
+            font-family: 'Arial Black', sans-serif;
+            font-size: 1.4rem;
+            color: #fff;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .success-text {
+            color: #ccc;
+            font-size: 1.05rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .order-number {
+            background: #141416;
+            color: #2ecc71;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 1.2rem;
+            display: inline-block;
+            margin-bottom: 20px;
+            border: 1px dashed rgba(46, 204, 113, 0.4);
+        }
+
+        .discord-redirect-btn {
+            background: #5865F2;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            width: 100%;
+        }
+        .discord-redirect-btn:hover { background: #4752C4; }
+
+        /* 3. SECȚIUNEA INTRO */
+        .hero-section {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        /* EFECTUL SPECIAL DE HOVER PE TITLUL PRINCIPAL */
+        .main-title {
+            font-size: 6rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-align: center;
+            cursor: pointer;
+            background: linear-gradient(to bottom, #ffffff 20%, #2ecc71 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            /* Umbra de bază a textului */
+            filter: drop-shadow(0px 8px 10px rgba(0, 0, 0, 0.5));
+            /* Tranziție super fină când pui/iei mouse-ul */
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
+            user-select: none;
+        }
+
+        /* Când cursorul este ținut pe titlu */
+        .main-title:hover {
+            transform: scale(1.08); /* Se face puțin mai mare */
+            /* Efect de strălucire și umbră neon verde */
+            filter: drop-shadow(0px 0px 25px rgba(46, 204, 113, 0.8)) drop-shadow(0px 4px 6px rgba(0,0,0,0.6));
+        }
+
+        .ip-box {
+            margin-top: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 100%;
+        }
+
+        .ip-box:hover {
+            background: #2ecc71;
+            border-color: #2ecc71;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4);
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            font-size: 0.9rem;
+            color: #2ecc71;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: bounce 2s infinite;
+            font-family: sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* 4. SECȚIUNEA CU RANKURI */
+        .ranks-section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #131316;
+            padding: 80px 20px;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+            border-bottom: 4px solid #2ecc71;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+
+        .ranks-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1100px;
+            width: 100%;
+            margin-bottom: 60px;
+        }
+
+        .rank-box {
+            background: #1e1e24;
+            border: 2px solid #2d2d35;
+            border-radius: 16px;
+            width: 350px;
+            padding: 35px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .rank-box:hover { transform: translateY(-10px); }
+        .rank-exotic:hover { border-color: #2ecc71; box-shadow: 0 15px 40px rgba(46, 204, 113, 0.25); }
+        .rank-god:hover { border-color: #e74c3c; box-shadow: 0 15px 40px rgba(231, 76, 60, 0.25); }
+
+        .rank-name { font-size: 2rem; text-transform: uppercase; margin-bottom: 10px; }
+        .rank-exotic .rank-name { color: #2ecc71; }
+        .rank-god .rank-name { color: #e74c3c; }
+        .rank-price { font-size: 2.2rem; font-weight: bold; margin-bottom: 25px; }
+
+        .info-label { font-family: sans-serif; font-size: 1.1rem; font-weight: bold; color: #888; text-align: left; margin-bottom: 12px; text-transform: uppercase; }
+
+        .advantages-list { font-family: sans-serif; list-style: none; text-align: left; margin-bottom: 35px; }
+        .advantages-list li { font-size: 1.05rem; padding: 10px 0; color: #e2e2e2; border-bottom: 1px solid #2d2d35; }
+        .rank-exotic .advantages-list li::before { content: "+ "; color: #2ecc71; font-weight: bold; }
+        .rank-god .advantages-list li::before { content: "+ "; color: #e74c3c; font-weight: bold; }
+
+        .buy-btn {
+            color: #ffffff; border: none; padding: 14px 24px; font-size: 1rem; font-weight: bold; text-transform: uppercase; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .rank-exotic .buy-btn { background-color: #2ecc71; }
+        .rank-exotic .buy-btn:hover { background-color: #27ae60; }
+        .rank-god .buy-btn { background-color: #e74c3c; }
+        .rank-god .buy-btn:hover { background-color: #c0392b; }
+
+        /* FOOTER */
+        .footer-section {
+            width: 100%; text-align: center; padding: 40px 20px; background: #0d0d0f; font-family: sans-serif; font-size: 1.1rem; color: #777; letter-spacing: 1px; border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .heart-icon { color: #e74c3c; display: inline-block; animation: heartBeat 1.5s infinite; margin-right: 5px; }
+
+        /* ANIMAȚII */
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } 60% { transform: translateY(-5px); } }
+        @keyframes heartBeat { 0% { transform: scale(1); } 14% { transform: scale(1.2); } 28% { transform: scale(1); } 42% { transform: scale(1.2); } 70% { transform: scale(1); } }
+
+        /* OPTIMIZARE MOBILĂ */
+        @media (max-width: 768px) {
+            .main-title { 
+                font-size: 3.2rem; 
+                letter-spacing: 2px;
+            }
+            .main-title:hover {
+                transform: scale(1.05); /* Pe mobil se mărește o idee mai puțin ca să nu iasă din ecran */
+            }
+            
+            .ip-box {
+                font-size: 1.1rem;
+                padding: 10px 20px;
+            }
+
+            .cart-navbar {
+                top: 15px;
+                right: 15px;
+                padding: 8px 14px;
+            }
+
+            .cart-sidebar { 
+                width: 100%; 
+                right: -100%; 
+                padding: 20px;
+            }
+
+            .ranks-section {
+                padding: 60px 15px;
+            }
+
+            .section-title {
+                font-size: 2rem;
+                margin-bottom: 35px;
+            }
+
+            .ranks-container {
+                gap: 25px;
+            }
+
+            .rank-box { 
+                width: 100%; 
+                padding: 25px 20px;
+            }
+
+            .rank-name {
+                font-size: 1.7rem;
+            }
+
+            .rank-price {
+                font-size: 1.9rem;
+                margin-bottom: 15px;
+            }
+            
+            .success-modal {
+                width: 92%;
+                padding: 25px 15px;
+            }
+            
+            .success-title {
+                font-size: 1.25rem;
+            }
+            
+            .success-text {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cart-overlay" id="cartOverlay" onclick="closeEverything()"></div>
+
+    <div class="success-modal" id="successModal">
+        <span class="success-icon">✔️</span>
+        <h3 class="success-title">Comandă înregistrată</h3>
+        <p class="success-text">Apasă pe butonul de mai jos, deschide un ticket pe Discord și prezintă numărul de comandă primit pentru a finaliza plata (PaySafe/Card) și a ridica rank-ul!</p>
+        <div class="order-number" id="displayOrderNum">#EX-00000</div>
+        <a href="https://discord.gg/k2GrR4FYkM" target="_blank" class="discord-redirect-btn" onclick="closeEverything()">Deschide Ticket pe Discord</a>
+    </div>
+
+    <div class="cart-navbar" onclick="toggleCart(true)">
+        <span class="cart-icon">🛒</span>
+        <span>Coș:</span>
+        <span class="cart-count" id="cart-counter">0</span>
+    </div>
+
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3 class="cart-title">Coșul tău</h3>
+            <span class="close-cart" onclick="toggleCart(false)">&times;</span>
+        </div>
+
+        <div class="cart-items-list" id="cartItemsContainer">
+            <p style="color: #666; text-align: center; margin-top: 20px;" id="emptyMessage">Coșul este gol...</p>
+        </div>
+
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cartTotalValue">0 EUR</span>
+            </div>
+
+            <input type="text" class="checkout-input" id="mcUsername" placeholder="Nume utilizator Minecraft...">
+
+            <p style="font-size: 0.9rem; margin-bottom: 8px; color: #aaa; font-weight: bold;">METODĂ DE PLATĂ:</p>
+            <div class="payment-methods">
+                <div class="pay-option selected" id="pay-discord">💬 Discord | PaySafe / Card</div>
+            </div>
+
+            <button class="checkout-btn" id="submitBtn" onclick="processCheckout()">Finalizează Comanda</button>
+        </div>
+    </div>
+
+    <div class="hero-section">
+        <h1 class="main-title" onclick="smoothScrollToShop()">ExoticSMP</h1>
+        <div class="ip-box" id="ipButton" onclick="copyIP()">exoticsmp.net</div>
+        <div class="scroll-indicator" onclick="smoothScrollToShop()">Dă în jos pentru shop ↓</div>
+    </div>
+
+    <div class="ranks-section" id="shop-section">
+        <h2 class="section-title">Rankuri Server</h2>
+        
+        <div class="ranks-container">
+            
+            <div class="rank-box rank-exotic">
+                <div>
+                    <h3 class="rank-name">Exotic Rank</h3>
+                    <div class="rank-price">2 EUR</div>
+                    <div class="info-label">Informatii:</div>
+                    <ul class="advantages-list">
+                        <li>3 Homes</li>
+                        <li>/hide</li>
+                        <li>Get shards everywhere</li>
+                        <li>Shorter RTP Cooldown</li>
+                    </ul>
+                </div>
+                <button class="buy-btn" onclick="addProduct('Exotic Rank', 2)">
+                    <span>🛒</span> Add to cart
+                </button>
+            </div>
+
+            <div class="rank-box rank-god">
+                <div>
+                    <h3 class="rank-name">God Rank</h3>
+                    <div class="rank-price">5 EUR</div>
+                    <div class="info-label">Informatii:</div>
+                    <ul class="advantages-list">
+                        <li>5 Homes</li>
+                        <li>/hide</li>
+                        <li>Get shards everywhere</li>
+                        <li>GOD kit</li>
+                        <li>Shorter RTP Cooldown</li>
+                    </ul>
+                </div>
+                <button class="buy-btn" onclick="addProduct('God Rank', 5)">
+                    <span>🛒</span> Add to cart
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <footer class="footer-section">
+        <span class="heart-icon">❤️</span> Joaca cu talent | Joaca original
+    </footer>
+
+    <script>
+        let cart = [];
+        const FORMSPREEE_URL = "https://formspree.io/f/mpqnywzo"; 
+        const DISCORD_INVITE_URL = "https://discord.gg/k2GrR4FYkM"; 
+
+        function toggleCart(open) {
+            const sidebar = document.getElementById('cartSidebar');
+            const overlay = document.getElementById('cartOverlay');
+            if (open) {
+                sidebar.classList.add('open');
+                overlay.classList.add('show');
+            } else {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            }
+        }
+
+        function closeEverything() {
+            document.getElementById('cartSidebar').classList.remove('open');
+            document.getElementById('successModal').classList.remove('show');
+            document.getElementById('cartOverlay').classList.remove('show');
+        }
+
+        function addProduct(name, price) {
+            cart.push({ id: Date.now(), name: name, price: price });
+            updateCartUI();
+            
+            const counter = document.getElementById('cart-counter');
+            counter.style.transform = "scale(1.3)";
+            setTimeout(() => { counter.style.transform = "scale(1)"; }, 200);
+        }
+
+        function removeProduct(id) {
+            cart = cart.filter(item => item.id !== id);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-counter').innerText = cart.length;
+            const container = document.getElementById('cartItemsContainer');
+            container.innerHTML = '';
+
+            if (cart.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; margin-top: 20px;">Coșul este gol...</p>';
+                document.getElementById('cartTotalValue').innerText = '0 EUR';
+                return;
+            }
+
+            let total = 0;
+            cart.forEach(item => {
+                total += item.price;
+                const div = document.createElement('div');
+                div.className = 'cart-item';
+                div.innerHTML = `
+                    <div class="item-info">
+                        <h4>${item.name}</h4>
+                        <span>${item.price} EUR</span>
+                    </div>
+                    <button class="remove-btn" onclick="removeProduct(${item.id})">Șterge</button>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('cartTotalValue').innerText = total + ' EUR';
+        }
+
+        function generateOrderNumber() {
+            const r1 = Math.floor(10000 + Math.random() * 90000); 
+            return `#EX-${r1}`;
+        }
+
+        function processCheckout() {
+            const username = document.getElementById('mcUsername').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (cart.length === 0) {
+                alert('Coșul tău este gol!');
+                return;
+            }
+            if (username === '') {
+                alert('Te rugăm să introduci numele tău de Minecraft!');
+                return;
+            }
+
+            const nrComanda = generateOrderNumber();
+            let listaProduse = cart.map(item => `${item.name} (${item.price} EUR)`).join(', ');
+            let totalComanda = document.getElementById('cartTotalValue').innerText;
+
+            submitBtn.innerText = "Se trimite comanda...";
+            submitBtn.disabled = true;
+
+            fetch(FORMSPREEE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    Numar_Comanda: nrComanda,
+                    Minecraft_Username: username,
+                    Produse_Cumparate: listaProduse,
+                    Total_Plata: totalComanda,
+                    Metoda_Plata: "Discord / PaySafe / Card",
+                    Status: "ASTEAPTA DESCHIDERE TICKET"
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('cartSidebar').classList.remove('open');
+                    document.getElementById('displayOrderNum').innerText = nrComanda;
+                    document.querySelector('.discord-redirect-btn').href = DISCORD_INVITE_URL;
+
+                    document.getElementById('successModal').classList.add('show');
+                    document.getElementById('cartOverlay').classList.add('show');
+                    
+                    cart = [];
+                    document.getElementById('mcUsername').value = '';
+                    updateCartUI();
+                } else {
+                    alert('A apărut o eroare la salvarea comenzii. Încearcă din nou.');
+                }
+            })
+            .catch(error => {
+                alert('Eroare de rețea. Verifică conexiunea la internet.');
+            })
+            .finally(() => {
+                submitBtn.innerText = "Finalizează Comanda";
+                submitBtn.disabled = false;
+            });
+        }
+
+        function smoothScrollToShop() {
+            const target = document.getElementById('shop-section');
+            const targetPosition = target.getBoundingClientRect().top + window.pageYOffset;
+            const startPosition = window.pageYOffset;
+            const distance = targetPosition - startPosition;
+            let startTime = null;
+            const duration = 1500; 
+
+            function animation(currentTime) {
+                if (startTime === null) startTime = currentTime;
+                const timeElapsed = currentTime - startTime;
+                const run = ease(timeElapsed, startPosition, distance, duration);
+                window.scrollTo(0, run);
+                if (timeElapsed < duration) requestAnimationFrame(animation);
+            }
+
+            function ease(t, b, c, d) {
+                t /= d / 2;
+                if (t < 1) return c / 2 * t * t + b;
+                t--;
+                return -c / 2 * (t * (t - 2) - 1) + b;
+            }
+            requestAnimationFrame(animation);
+        }
+
+        function copyIP() {
+            const ipText = "exoticsmp.net";
+            const ipButton = document.getElementById('ipButton');
+            navigator.clipboard.writeText(ipText).then(() => {
+                ipButton.innerText = "Copiat în clipboard!";
+                ipButton.style.background = "#2ecc71";
+                setTimeout(() => {
+                    ipButton.innerText = ipText;
+                    ipButton.style.background = "rgba(255, 255, 255, 0.05)";
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
